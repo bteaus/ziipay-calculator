@@ -122,6 +122,73 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--light);}
 </head>
 <body>
 
+<!-- ── Auth overlay ─────────────────────────────────────── -->
+<div id="auth-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  background:var(--navy);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="
+    background:#fff;border-radius:14px;padding:36px 40px;
+    width:340px;max-width:90vw;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--adyen),var(--mx51));
+      border-radius:10px;display:flex;align-items:center;justify-content:center;
+      font-weight:800;color:#fff;font-size:18px;margin:0 auto 16px;">Z</div>
+    <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;">ZiiPay Calculator</div>
+    <div style="font-size:12px;color:var(--light);margin-bottom:24px;">Enter password to continue</div>
+    <input id="auth-user" type="text" placeholder="Username"
+      style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;
+      font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;"
+      onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()">
+    <input id="auth-pass" type="password" placeholder="Password"
+      style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;
+      font-size:14px;margin-bottom:8px;outline:none;font-family:inherit;"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="auth-err" style="font-size:12px;color:var(--red);height:18px;margin-bottom:8px;"></div>
+    <button onclick="doLogin()" style="
+      width:100%;padding:11px;background:var(--navy);color:#fff;
+      border:none;border-radius:8px;font-size:14px;font-weight:600;
+      cursor:pointer;transition:opacity .15s;"
+      onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      Sign in
+    </button>
+    <div style="font-size:11px;color:var(--light);margin-top:16px;">ZiiPay internal use only</div>
+  </div>
+</div>
+
+<script>
+// ── Auth ────────────────────────────────────────────────────
+// Credentials — change these as needed
+const USERS = {
+  'ziipay': 'Zii2026!',
+  'admin':  'ZiiAdmin@26',
+};
+const SESSION_KEY = 'zp_auth';
+
+function doLogin() {
+  const u = document.getElementById('auth-user').value.trim().toLowerCase();
+  const p = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-err');
+  if (USERS[u] && USERS[u] === p) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('auth-overlay').style.display = 'none';
+    err.textContent = '';
+  } else {
+    err.textContent = 'Incorrect username or password.';
+    document.getElementById('auth-pass').value = '';
+    document.getElementById('auth-pass').focus();
+  }
+}
+
+// Check if already authenticated this session
+if (sessionStorage.getItem(SESSION_KEY) === '1') {
+  document.getElementById('auth-overlay').style.display = 'none';
+} else {
+  // Focus username on load
+  setTimeout(() => document.getElementById('auth-user').focus(), 100);
+}
+</script>
+
 <header>
   <div class="logo">Z</div>
   <div>
