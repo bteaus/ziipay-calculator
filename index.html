@@ -580,7 +580,9 @@ function calc(){
   const pvs=costs(turnover,intlPct,octOn);
   if(ch!=='retail') pvs.sort((a,b)=>a.monthly-b.monthly);
   const cheapest=[...pvs].sort((a,b)=>a.monthly-b.monthly)[0];
-  const best=pvs.find(p=>p.key===selProv)||cheapest;
+  // MX51-only options (T+0 / Amex) force MX51 as the deal basis unless user explicitly picked another
+  const mx51Forced=ch==='retail'&&((document.getElementById('rt0')?.checked)||(document.getElementById('rax')?.checked));
+  const best=pvs.find(p=>p.key===selProv)||(mx51Forced?pvs.find(p=>p.key==='rm'):cheapest)||cheapest;
 
   // ── Provider cards
   const cEl=document.getElementById('cards');
@@ -589,7 +591,7 @@ function calc(){
     const iC=p===cheapest, iSel=p===best, extra=p.monthly-cheapest.monthly;
     return `<div class="pcard${iSel?' best':''}" onclick="selectProv('${p.key}')" style="cursor:pointer;${iSel?'border-color:'+p.color:''}">
       ${iC?`<span class="btop" style="background:${p.color}">Lowest cost</span>`:''}
-      ${iSel&&selProv?`<span class="btop" style="background:${p.color};right:8px;left:auto;">Selected</span>`:''}
+      ${iSel&&!iC?`<span class="btop" style="background:${p.color};right:8px;left:auto;">Deal basis</span>`:''}
       <div class="pname" style="color:${p.color}">${p.name}</div>
       <div class="prate" style="color:${iSel?p.color:'var(--navy)'}">${pct(p.total)}</div>
       <div class="psub">${dlrf(p.monthly)}/mo · ${dlrf(p.monthly*12)}/yr</div>
