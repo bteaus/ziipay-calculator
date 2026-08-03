@@ -419,7 +419,7 @@ const OCT_CR_PCT=.25,OCT_A_IC=.505,OCT_M_IC=.619,OCT_NEW=.30;
 const AOV_OPTS=[5,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,50,55,60,70,80,90,100,150,200,300];
 
 // ══ State ══════════════════════════════════════════════════
-let ch='ipp', aov=12, msf=1.20, lAmt=125, cAmt=69;
+let ch='ipp', aov=12, msf=1.20, lAmt=125, cAmt=69, selProv=null;
 
 const PRESETS={
   cafe:      {t:50000, a:12, i:5,  c:'ipp',    m:1.20},
@@ -449,7 +449,7 @@ function onMsfSlide(){
 
 // ══ Channel ════════════════════════════════════════════════
 function setCh(c,b){
-  ch=c;
+  ch=c; selProv=null;
   document.querySelectorAll('#channels .sb').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
   document.getElementById('ecom-msf').style.display='none';
@@ -487,7 +487,7 @@ function loadPreset(k,b){
   document.getElementById('intl').value=p.i;
   aov=p.a; msf=p.m;
   initAov();
-  ch=p.c;
+  ch=p.c; selProv=null;
   document.querySelectorAll('#channels .sb').forEach((x,i)=>
     x.classList.toggle('on',['ipp','retail'][i]===ch));
   document.getElementById('ecom-msf').style.display='none';
@@ -562,6 +562,12 @@ function ziiCost(){
   return {leasing:lAmt,core:cAmt,oth,dev,total:lAmt+cAmt+oth+dev};
 }
 
+// ══ Provider selection ═════════════════════════════════════
+function selectProv(k){
+  selProv=(selProv===k)?null:k;   // click again to revert to auto
+  calc();
+}
+
 // ══ Main ══════════════════════════════════════════════════
 function calc(){
   const turnover=parseInt(document.getElementById('turnover').value);
@@ -573,15 +579,17 @@ function calc(){
 
   const pvs=costs(turnover,intlPct,octOn);
   if(ch!=='retail') pvs.sort((a,b)=>a.monthly-b.monthly);
-  const best=[...pvs].sort((a,b)=>a.monthly-b.monthly)[0];
+  const cheapest=[...pvs].sort((a,b)=>a.monthly-b.monthly)[0];
+  const best=pvs.find(p=>p.key===selProv)||cheapest;
 
   // ── Provider cards
   const cEl=document.getElementById('cards');
   cEl.style.gridTemplateColumns=pvs.length===1?'1fr':'repeat(2,1fr)';
   cEl.innerHTML=pvs.map(p=>{
-    const iB=p===best,extra=p.monthly-best.monthly;
-    return `<div class="pcard${iB?' best':''}" style="${iB?'border-color:'+p.color:''}">
-      ${iB?`<span class="btop" style="background:${p.color}">Lowest cost</span>`:''}
+    const iC=p===cheapest, iSel=p===best, extra=p.monthly-cheapest.monthly;
+    return `<div class="pcard${iSel?' best':''}" onclick="selectProv('${p.key}')" style="cursor:pointer;${iSel?'border-color:'+p.color:''}">
+      ${iC?`<span class="btop" style="background:${p.color}">Lowest cost</span>`:''}
+      ${iSel&&selProv?`<span class="btop" style="background:${p.color};right:8px;left:auto;">Selected</span>`:''}
       <div class="pname" style="color:${p.color}">${p.name}</div>
       <div class="prate" style="color:${iB?p.color:'var(--navy)'}">${pct(p.total)}</div>
       <div class="psub">${dlrf(p.monthly)}/mo · ${dlrf(p.monthly*12)}/yr</div>
@@ -592,7 +600,7 @@ function calc(){
         ${intlPct>0?`<span>Intl IC+Sch: ${pct(p.intl_ic)} (${intlPct}%)</span>`:''}
         ${p.note?`<span style="font-size:9px;color:var(--light)">${p.note}</span>`:''}
       </div>
-      ${!iB?`<div class="pdiff">+${dlrf(extra)}/mo vs cheapest</div>`:''}
+      ${!iC?`<div class="pdiff">+${dlrf(extra)}/mo vs cheapest</div>`:''}
     </div>`;
   }).join('');
 
@@ -616,9 +624,8 @@ function calc(){
       <span class="blbl" style="font-weight:700">Total</span>
       <div class="btrack"><div class="bfill" style="width:100%;background:${best.color}"></div></div>
       <span class="bval" style="font-weight:700;color:${best.color}">${pct(mV)}</span></div>
-    ${pvs.length>1?`<div style="margin-top:8px;font-size:10px;color:var(--slate)">
-      Switch to ${pvs[1].name}: <strong style="color:var(--red)">+${dlrf(pvs[1].monthly-best.monthly)}/mo
-      (+${pct(pvs[1].total-best.total)})</strong></div>`:''}`;
+    ${pvs.length>1&&pvs.find(p=>p!==best)?`<div style="margin-top:8px;font-size:10px;color:var(--slate)">
+      ${(()=>{const o=pvs.find(p=>p!==best);return `Switch to ${o.name}: <strong style="color:${o.monthly>best.monthly?'var(--red)':'var(--green,#1D9E75)'}">${o.monthly>best.monthly?'+':'−'}${dlrf(Math.abs(o.monthly-best.monthly))}/mo</strong>`})()}</div>`:''}`;
 
   // ── Commission & profit
   const comm=commission(turnover,best.monthly);
