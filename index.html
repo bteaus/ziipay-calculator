@@ -244,6 +244,23 @@ if (sessionStorage.getItem(SESSION_KEY) === '1') {
           <button class="sb" onclick="setCh('retail',this)">Retail wholesale</button>
         </div>
       </div>
+      <div id="retail-opts" style="display:none;">
+        <hr class="dv">
+        <div class="trow">
+          <div>
+            <div class="tlbl">MX51 — T+0 settlement</div>
+            <div class="tsub">+0.04% on MX51 retail rate</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="rt0" onchange="calc()"><span class="tsl"></span></label>
+        </div>
+        <div class="trow">
+          <div>
+            <div class="tlbl">MX51 — Amex included</div>
+            <div class="tsub">+0.05% on MX51 retail rate</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="rax" onchange="calc()"><span class="tsl"></span></label>
+        </div>
+      </div>
       <hr class="dv">
       <div class="trow">
         <div>
@@ -397,7 +414,7 @@ const T_MX51_OCT = [
   {max: 200, r:0.1914},{max:9999, r:0.2722},
 ];
 const T_INTL = [{max:25,r:2.90},{max:50,r:3.10},{max:100,r:3.40},{max:9999,r:3.80}];
-const MK_A=.160,MK_M=.150,PROC=.04,RETAIL_COST=.50;
+const MK_A=.160,MK_M=.150,PROC=.04,RETAIL_MX51=.52,RETAIL_ANZ=.50,RETAIL_T0=.04,RETAIL_AMEX=.05;
 const OCT_CR_PCT=.25,OCT_A_IC=.505,OCT_M_IC=.619,OCT_NEW=.30;
 const AOV_OPTS=[5,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,50,55,60,70,80,90,100,150,200,300];
 
@@ -437,6 +454,7 @@ function setCh(c,b){
   b.classList.add('on');
   document.getElementById('ecom-msf').style.display='none';
   document.getElementById('msf-slider-row').style.display='block';
+  document.getElementById('retail-opts').style.display=(c==='retail')?'block':'none';
   calc();
 }
 
@@ -474,6 +492,7 @@ function loadPreset(k,b){
     x.classList.toggle('on',['ipp','retail'][i]===ch));
   document.getElementById('ecom-msf').style.display='none';
   document.getElementById('msf-slider-row').style.display='block';
+  document.getElementById('retail-opts').style.display=(ch==='retail')?'block':'none';
   document.getElementById('msf-slider').value=msf;
   document.getElementById('msf-display').textContent=msf.toFixed(2)+'%';
   calc();
@@ -493,10 +512,23 @@ function costs(turnover,intlPct,octOn){
   const aCS=octOn?OCT_CR_PCT*Math.max(OCT_A_IC-OCT_NEW,0):0;
 
   if(ch==='retail'){
-    const t=RETAIL_COST;
-    return [{key:'r',name:'MX51 / ANZ Retail',color:'#8B4513',
-      dom_ic:t,dom_mk:0,dom_proc:0,dom_tot:t,intl_ic:t,intl_tot:t,
-      total:t,monthly:turnover*t/100,note:'Fixed 0.50% excl. GST (wholesale)'}];
+    const t0On=document.getElementById('rt0')?.checked||false;
+    const axOn=document.getElementById('rax')?.checked||false;
+    const tM=RETAIL_MX51+(t0On?RETAIL_T0:0)+(axOn?RETAIL_AMEX:0);
+    const tA=RETAIL_ANZ;
+    const mNote=['0.52% excl. GST flat — incl. local & intl Visa/MC/EFTPOS/UnionPay'];
+    if(t0On)mNote.push('+0.04% T+0 settlement');
+    if(axOn)mNote.push('+0.05% Amex included');
+    return [
+      {key:'rm',name:'MX51 Retail',color:'#145E4A',
+        dom_ic:tM,dom_mk:0,dom_proc:0,dom_tot:tM,intl_ic:tM,intl_tot:tM,
+        total:tM,monthly:turnover*tM/100,
+        note:mNote.join(' · ')},
+      {key:'ra',name:'ANZ Retail',color:'#8B4513',
+        dom_ic:tA,dom_mk:0,dom_proc:0,dom_tot:tA,intl_ic:tA,intl_tot:tA,
+        total:tA,monthly:turnover*tA/100,
+        note:'0.50% excl. GST — incl. local & intl Visa/MC/EFTPOS (excl. UnionPay)'},
+    ];
   }
   // IPP
   const rA=lu(T_IPP,aov);
@@ -540,8 +572,8 @@ function calc(){
   document.getElementById('vi').textContent=intlPct+'%';
 
   const pvs=costs(turnover,intlPct,octOn);
-  pvs.sort((a,b)=>a.monthly-b.monthly);
-  const best=pvs[0];
+  if(ch!=='retail') pvs.sort((a,b)=>a.monthly-b.monthly);
+  const best=[...pvs].sort((a,b)=>a.monthly-b.monthly)[0];
 
   // ── Provider cards
   const cEl=document.getElementById('cards');
