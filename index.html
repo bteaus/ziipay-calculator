@@ -197,7 +197,7 @@ if (sessionStorage.getItem(SESSION_KEY) === '1') {
   <div class="logo">Z</div>
   <div>
     <h1>ZiiPay Payment Cost Calculator</h1>
-    <p>Actual data · Adyen Apr–Jun 2026 · MX51 Jan–May 2026</p>
+    <p>Actual data · Adyen Apr–Jun 2026 · MX51 txn-level May–Jun 2026</p>
   </div>
 </header>
 
@@ -248,7 +248,7 @@ if (sessionStorage.getItem(SESSION_KEY) === '1') {
       <div class="trow">
         <div>
           <div class="tlbl">Post-Oct 2026 reform</div>
-          <div class="tsub">Credit IC → 0.30% cap · Debit unchanged</div>
+          <div class="tsub">Dom IC caps applied (MX51 exact · Adyen approx)</div>
         </div>
         <label class="tog"><input type="checkbox" id="oct" onchange="calc()"><span class="tsl"></span></label>
       </div>
@@ -362,7 +362,7 @@ if (sessionStorage.getItem(SESSION_KEY) === '1') {
 </div>
 
 </div><!-- end .page -->
-<footer>ZiiPay internal use · Jun 2026 · Refresh quarterly</footer>
+<footer>ZiiPay internal use · Aug 2026 · MX51 markup 15bps · Refresh quarterly</footer>
 
 <script>
 // ══ Rate tables ═══════════════════════════════════════════
@@ -377,17 +377,27 @@ const T_IPP = [
   {max: 150, r:0.2188},{max: 200, r:0.2258},{max:9999, r:0.2555},
 ];
 const T_MX51 = [
-  {max:   8, r:0.5987},{max:  10, r:0.5918},{max:  12, r:0.5046},
-  {max:  14, r:0.4368},{max:  16, r:0.4213},{max:  18, r:0.3969},
-  {max:  20, r:0.3742},{max:  22, r:0.3686},{max:  25, r:0.3542},
-  {max:  28, r:0.3483},{max:  32, r:0.3174},{max:  36, r:0.2907},
-  {max:  40, r:0.2667},{max:  45, r:0.2704},{max:  50, r:0.2613},
-  {max:  60, r:0.2604},{max:  70, r:0.2685},{max:  80, r:0.2663},
-  {max:  90, r:0.2594},{max: 100, r:0.2520},{max: 150, r:0.2241},
-  {max: 200, r:0.2127},{max:9999, r:0.2866},
+  {max:   8, r:0.5761},{max:  10, r:0.5873},{max:  12, r:0.4992},
+  {max:  14, r:0.4331},{max:  16, r:0.4261},{max:  18, r:0.3839},
+  {max:  20, r:0.3862},{max:  22, r:0.3658},{max:  25, r:0.3522},
+  {max:  28, r:0.3471},{max:  32, r:0.3085},{max:  36, r:0.2947},
+  {max:  40, r:0.2607},{max:  45, r:0.2752},{max:  50, r:0.2732},
+  {max:  60, r:0.2809},{max:  70, r:0.2539},{max:  80, r:0.2704},
+  {max:  90, r:0.2527},{max: 100, r:0.2273},{max: 150, r:0.2289},
+  {max: 200, r:0.1942},{max:9999, r:0.2738},
+];
+const T_MX51_OCT = [
+  {max:   8, r:0.4271},{max:  10, r:0.4787},{max:  12, r:0.4152},
+  {max:  14, r:0.3604},{max:  16, r:0.3670},{max:  18, r:0.3368},
+  {max:  20, r:0.3477},{max:  22, r:0.3318},{max:  25, r:0.3257},
+  {max:  28, r:0.3281},{max:  32, r:0.2922},{max:  36, r:0.2783},
+  {max:  40, r:0.2483},{max:  45, r:0.2639},{max:  50, r:0.2650},
+  {max:  60, r:0.2737},{max:  70, r:0.2473},{max:  80, r:0.2646},
+  {max:  90, r:0.2486},{max: 100, r:0.2233},{max: 150, r:0.2257},
+  {max: 200, r:0.1914},{max:9999, r:0.2722},
 ];
 const T_INTL = [{max:25,r:2.90},{max:50,r:3.10},{max:100,r:3.40},{max:9999,r:3.80}];
-const MK_A=.160,MK_M=.210,PROC=.04,RETAIL_COST=.50;
+const MK_A=.160,MK_M=.150,PROC=.04,RETAIL_COST=.50;
 const OCT_CR_PCT=.25,OCT_A_IC=.505,OCT_M_IC=.619,OCT_NEW=.30;
 const AOV_OPTS=[5,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,50,55,60,70,80,90,100,150,200,300];
 
@@ -481,7 +491,6 @@ function costs(turnover,intlPct,octOn){
   const dSh=(100-intlPct)/100, iSh=intlPct/100;
   const iR=lu(T_INTL,aov).r;
   const aCS=octOn?OCT_CR_PCT*Math.max(OCT_A_IC-OCT_NEW,0):0;
-  const mCS=octOn?OCT_CR_PCT*Math.max(OCT_M_IC-OCT_NEW,0):0;
 
   if(ch==='retail'){
     const t=RETAIL_COST;
@@ -490,11 +499,12 @@ function costs(turnover,intlPct,octOn){
       total:t,monthly:turnover*t/100,note:'Fixed 0.50% excl. GST (wholesale)'}];
   }
   // IPP
-  const rA=lu(T_IPP,aov),rM=lu(T_MX51,aov);
+  const rA=lu(T_IPP,aov);
+  const rM=octOn?lu(T_MX51_OCT,aov):lu(T_MX51,aov);
   const a_dic=rA.r-aCS,a_proc=(PROC/aov)*100;
   const a_dT=a_dic+MK_A+a_proc,a_iT=iR+MK_A+a_proc;
   const a_tot=dSh*a_dT+iSh*a_iT;
-  const m_dic=rM.r-mCS;
+  const m_dic=rM.r;
   const m_dT=m_dic+MK_M,m_iT=iR+MK_M;
   const m_tot=dSh*m_dT+iSh*m_iT;
   return [
@@ -614,10 +624,10 @@ function calc(){
 
   // ── Hints
   const hs=[];
-  if(aov<35&&ch==='ipp') hs.push(`<strong>Low AOV ($${aov}):</strong> Adyen's $0.04/txn fixed fee is proportionally large. MX51 is typically cheaper below $40 AOV.`);
-  if(aov>=40&&ch==='ipp') hs.push(`<strong>AOV $${aov}:</strong> Adyen IPP's lower markup (0.16% vs 0.21%) outweighs the $0.04 fixed fee above ~$40 AOV.`);
+  if(aov<35&&ch==='ipp') hs.push(`<strong>Low AOV ($${aov}):</strong> Adyen's $0.04/txn fixed fee is proportionally large. MX51 (15bps markup, no per-txn fee) is typically cheaper across most AOVs.`);
+  if(aov>=40&&ch==='ipp') hs.push(`<strong>AOV $${aov}:</strong> Adyen IPP markup 0.16% vs MX51 0.15% — MX51 is now cheaper at most AOVs without the $0.04/txn fee.`);
   if(intlPct>=15) hs.push(`<strong>High intl card share (${intlPct}%):</strong> International IC+Scheme is ${pct(lu(T_INTL,aov).r)} — well above domestic. Consider a premium pricing tier.`);
-  if(octOn) hs.push(`<strong>Post-Oct 2026:</strong> ~25% credit card vol assumed. Credit IC capped at 0.30% (was ~0.50% Adyen / ~0.62% MX51). Debit/eftpos IC unchanged.`);
+  if(octOn) hs.push(`<strong>Post-Oct 2026:</strong> ~25% credit card vol assumed. MX51 uses exact post-cap costs from txn-level data (dom Visa/MC credit 0.80%→0.30% eff. cap modelling); Adyen uses ~25% credit vol approximation.`);
   if(net<0) hs.push(`<strong>Net profit is negative.</strong> Consider a higher MSF rate or reduce Zii cost relief for this merchant.`);
   document.getElementById('hints').innerHTML=hs.length
     ?hs.map(h=>`<div>${h}</div>`).join('')
